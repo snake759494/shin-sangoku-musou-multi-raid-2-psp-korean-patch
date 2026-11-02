@@ -5,8 +5,8 @@ PSP 일본판 **真・三國無双 MULTI RAID 2 (진·삼국무쌍 멀티레이�
 ## 적용 방법
 1. 아래 해시와 일치하는 **원본 `.iso`** 를 준비합니다. (CSO·CHD 등으로 변환한 이미지에는 적용할 수 없습니다.)
    - PowerShell: `Get-FileHash -Algorithm MD5 -LiteralPath '.$X'`
-2. xdeltaUI 같은 도구로 원본 `.iso` 에 `ShinSangokuMusou_MultiRaid2_KO_v1.0.xdelta` 를 적용합니다. (Patch = xdelta, Source File = 원본 ISO, Output File = 새 파일명)
-   - 명령줄: `xdelta3 -d -s "Shin Sangoku Musou - Multi Raid 2 (Japan).iso" ShinSangokuMusou_MultiRaid2_KO_v1.0.xdelta "Shin Sangoku Musou - Multi Raid 2 (Korean).iso"`
+2. xdeltaUI 같은 도구로 원본 `.iso` 에 `ShinSangokuMusou_MultiRaid2_KO_v1.1.xdelta` 를 적용합니다. (Patch = xdelta, Source File = 원본 ISO, Output File = 새 파일명)
+   - 명령줄: `xdelta3 -d -s "Shin Sangoku Musou - Multi Raid 2 (Japan).iso" ShinSangokuMusou_MultiRaid2_KO_v1.1.xdelta "Shin Sangoku Musou - Multi Raid 2 (Korean).iso"`
 3. 만들어진 ISO를 PPSSPP 또는 커스텀 펌웨어(PSP·PS Vita Adrenaline 등)에서 실행합니다.
 
 | 항목 | 값 |
@@ -14,14 +14,15 @@ PSP 일본판 **真・三國無双 MULTI RAID 2 (진·삼국무쌍 멀티레이�
 | 원본 ISO 크기 | 1,703,280,640 바이트 |
 | 원본 ISO MD5 | `1623a293edca9a32bc9e768fa5e37233` |
 | 원본 ISO SHA-256 | `b054dd69f34b20c21bb982e4baaea1a19446644cd1d0bc8c13c822eea7485a1c` |
-| xdelta SHA-256 | `49ce86f18126cf73c395d383e2a5db82d11fa293f584b2499f556dd5fca79996` |
+| xdelta SHA-256 | `bb99ad7a95d9200ee338786a8090fa2b9f4c86857ed3900303c17db0e97682bc` |
 | 결과 ISO 크기 | 1,703,280,640 바이트 |
-| 결과 ISO SHA-256 | `7d5404141a442ab18f8f5d71903779a173131a36eaa6213f99fb728ce369cf91` |
+| 결과 ISO SHA-256 | `5e6e3e91f7db235abfde88e562c91f6d7deac8461f6a303b174a12f6825dc389` |
 
 ## 주의
 - 복호화한 실행 파일을 EBOOT로 넣었기 때문에 **PPSSPP·커스텀 펌웨어 전용**입니다. 정품 펌웨어에서는 부팅되지 않습니다.
 - 원본이나 다른 버전 패치에서 만든 **상태저장(세이브 스테이트)** 은 불러오지 마세요. 일반 세이브는 그대로 쓸 수 있습니다.
 - xdelta는 압축하지 않은 형식(`-0`)입니다(약 42MB).
+- v1.0 패치를 적용한 ISO에는 덮어쓸 수 없습니다. 반드시 **원본 일본판 ISO** 에 v1.1을 적용하세요.
 
 ## 한글화 내용
 - 실행 파일 문자열 8,042개 직접 번역 — 메뉴, 도움말, 시설 안내, 무기·무환·아이템 이름과 설명, 퀘스트 개요, 무장 열전, 전투 메시지, 시스템 메시지

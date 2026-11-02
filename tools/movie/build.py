@@ -27,6 +27,15 @@ def wrap(text,width,font):
     assert len(lines)<=1,(text,lines)
     return '\\N'.join(lines)
 
+def strip_info_sei(es):
+    """Drop x264's user-data SEI (encoder settings text); the shipped streams have none."""
+    out=bytearray();pos=0
+    for m in re.finditer(rb'\x00\x00\x01\x06\x05',es):
+        a=m.start()-(1 if m.start() and es[m.start()-1]==0 else 0)
+        b=es.find(b'\0\0\1',m.end());b=b-(1 if es[b-1]==0 else 0)
+        out+=es[pos:a];pos=b
+    return bytes(out+es[pos:])
+
 def one(key,resume=False):
     ctypes.windll.kernel32.SetPriorityClass(ctypes.windll.kernel32.GetCurrentProcess(),0x4000)
     cfg=json.loads((GAME/'trans'/'movie_ko.json').read_text(encoding='utf8'))[key];cues=cfg['cues']
@@ -57,12 +66,12 @@ def one(key,resume=False):
     for attempt in range(1 if resume else 0,48):
         bitrate=base_bitrate
         zone_opts=(':zones='+ '/'.join(f'{a},{b-1},q={z}' for (a,b),z in sorted(zones.items()))) if zones else ''
-        cmd=[FF,'-y','-v','warning','-threads','1','-r','30000/1001','-i','input.264','-an','-vf','ass=subtitles.ass:fontsdir=fonts','-c:v','libx264','-threads','1','-preset','veryfast','-profile:v','main','-level:v','2.1','-pix_fmt','yuv420p','-b:v',f'{bitrate}k','-maxrate','4000k','-bufsize','4000k','-force_key_frames',keytimes,'-x264-params','bframes=0:cabac=1:ref=1:weightp=0:aud=1:repeat-headers=1:scenecut=0:keyint=30000:min-keyint=1:pic-struct=1:nal-hrd=vbr'+zone_opts,'-f','h264','output.264']
+        cmd=[FF,'-y','-v','warning','-threads','1','-r','30000/1001','-i','input.264','-an','-vf','ass=subtitles.ass:fontsdir=fonts','-c:v','libx264','-threads','1','-preset','veryfast','-profile:v','main','-level:v','2.1','-pix_fmt','yuv420p','-b:v',f'{bitrate}k','-maxrate','4000k','-bufsize','4000k','-force_key_frames',keytimes,'-x264-params','bframes=0:cabac=1:ref=1:weightp=0:aud=1:repeat-headers=1:scenecut=0:keyint=30000:min-keyint=1:pic-struct=1:nal-hrd=vbr:force-cfr=1'+zone_opts,'-f','h264','output.264']
         with (work/'encode.log').open('w') as log:
             for passno in ((1,2) if attempt==0 else (2,)):
                 run=cmd[:-1]+['-pass',str(passno),'-passlogfile','passlog',('NUL' if passno==1 else cmd[-1])]
                 subprocess.run(run,cwd=work,stdout=log,stderr=log,check=True)
-        new=(work/'output.264').read_bytes()
+        new=strip_info_sei((work/'output.264').read_bytes())
         newstarts=P._aud_offsets(new)+[len(new)];bad=[]
         for (a,fa),(b,fb) in zip(anchors,anchors[1:]):
             need=newstarts[fb]-newstarts[fa]+(4 if fa else 0);cap=sum(max(0,v-6) for _,_,v in slots[a:b])

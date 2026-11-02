@@ -2,8 +2,8 @@
 
 Unlike a generic remux, audio PES bytes, SCRs, the PSMF header, metadata,
 sector count and file size remain exact. Each original timestamp packet
-starts with the same numbered access unit. Spare space is MPEG padding,
-never long zero runs inside the AVC stream.
+starts with the same numbered access unit. Spare space is an AVC filler-data NAL,
+so every PES slot stays full as in the shipped file.
 """
 import bisect
 import struct
@@ -42,29 +42,36 @@ def remux(d, new):
     replacements = {}
     report = []
     for (a, fa), (b, fb) in zip(anchors, anchors[1:]):
-        body = (b'\0'*4 if fa else b'') + new[starts[fa]:starts[fb]]
         group = slots[a:b]
-        # Reserve a legal six-byte padding packet in every used PES slot.
-        capacities = [max(0, cap - 6) for _, _, cap in group]
-        capacity = sum(capacities)
-        if len(body) > capacity:
-            raise ValueError(f'anchor {fa}:{fb}: {len(body)} > {capacity}')
-        consumed = weight = 0
-        for (si, qi, cap), usable in zip(group, capacities):
+        # Fill every PES slot completely, like the shipped stream: spare bytes
+        # become AVC filler-data NALs, so sectors keep their original packet
+        # layout (no added MPEG padding packets). Filler goes to each frame
+        # that is smaller than its original, so per-frame sizes (and the
+        # decoder buffer) stay close to the shipped stream.
+        capacity = sum(cap for _, _, cap in group)
+        aus = [new[starts[f]:starts[f + 1]] for f in range(fa, fb)]
+        lead = b'\0'*4 if fa else b''
+        extra = capacity - len(lead) - sum(map(len, aus))
+        if extra < 0:
+            raise ValueError(f'anchor {fa}:{fb}: {capacity - extra} > {capacity}')
+        fill = [0] * len(aus)
+        for i, f in enumerate(range(fa, fb)):
+            want = max(0, old_starts[f + 1] - old_starts[f] - len(aus[i]) if f + 1 < len(old_starts) else 0)
+            fill[i] = min(want, extra); extra -= fill[i]
+        fill[-1] += extra
+        body = bytearray(lead)
+        for au, n in zip(aus, fill):
+            body += au
+            if n >= 6: body += b'\0\0\0\1\x0c' + b'\xff' * (n - 6) + b'\x80'
+            else: body += b'\0' * n
+        body = bytes(body)
+        consumed = 0
+        for si, qi, cap in group:
             q = d.sectors[si].packets[qi]
-            weight += usable
-            end = len(body) * weight // capacity
-            piece = body[consumed:end]
-            consumed = end
-            if not piece:
-                assert not q.flags2 & 0x80
-                raw = b'\0\0\1\xbe' + struct.pack('>H', len(q.raw)-6) + b'\xff'*(len(q.raw)-6)
-            else:
-                hdr = bytearray(q.raw[:q.payload_off])
-                struct.pack_into('>H', hdr, 4, len(hdr)-6+len(piece))
-                gap = len(q.raw)-len(hdr)-len(piece)
-                assert gap >= 6
-                raw = bytes(hdr)+piece+b'\0\0\1\xbe'+struct.pack('>H',gap-6)+b'\xff'*(gap-6)
+            piece = body[consumed:consumed + cap]
+            consumed += cap
+            hdr = q.raw[:q.payload_off]
+            raw = hdr + piece
             assert len(raw) == len(q.raw)
             replacements[si, qi] = raw
         assert consumed == len(body)
